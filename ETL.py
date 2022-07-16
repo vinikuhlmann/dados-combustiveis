@@ -1,23 +1,35 @@
-import logging
 import pandas as pd
 
-logging.basicConfig(format='%(message)s', level=logging.INFO)
-
 # * Extract
-logging.info('Extraindo dados\n')
-file1 = 'Arquivos\importacao-gas-natural-2000-2022.csv'
-file2 = 'Arquivos\importacoes-exportacoes-derivados-2000-2022.csv'
-file3 = 'Arquivos\importacoes-exportacoes-etanol-2012-2022.csv'
-file4 = 'Arquivos\preços-combustiveis-2004-2021.tsv'
-df1 = pd.read_csv(file1, sep=';')
-df2 = pd.read_csv(file2, sep=';')
-df3 = pd.read_csv(file3, sep=';')
-df4 = pd.read_csv(file4, sep='\t')
-logging.debug(f'{file1}\n{df1.head(3)}\n')
-logging.debug(f'{file2}\n{df2.head(3)}\n')
-logging.debug(f'{file3}\n{df3.head(3)}\n')
-logging.debug(f'{file4}\n{df4.head(3)}\n')
+
+print('Extraindo dados\n')
+
+gas_df = pd.read_csv('Arquivos\importacao-gas-natural-2000-2022.csv', sep=';')
+derivados_df = pd.read_csv('Arquivos\importacoes-exportacoes-derivados-2000-2022.csv', sep=';')
+etanol_df = pd.read_csv('Arquivos\importacoes-exportacoes-etanol-2012-2022.csv', sep=';')
+precos_df = pd.read_csv('Arquivos\preços-combustiveis-2004-2021.tsv', sep='\t')
 
 # * Transform
+
+print('Transformando dados')
+
+# Remove dados de exportações e exclui a coluna de operação comercial
+gas_df.drop(gas_df[gas_df['OPERAÇÃO COMERCIAL'] == 'EXPORTAÇÃO'].index, inplace=True)
+derivados_df.drop(derivados_df[derivados_df['OPERAÇÃO COMERCIAL'] == 'EXPORTAÇÃO'].index, inplace=True)
+etanol_df.drop(etanol_df[etanol_df['OPERAÇÃO COMERCIAL'] == 'EXPORTAÇÃO'].index, inplace=True)
+gas_df.drop('OPERAÇÃO COMERCIAL', axis=1, inplace=True)
+derivados_df.drop('OPERAÇÃO COMERCIAL', axis=1, inplace=True)
+etanol_df.drop('OPERAÇÃO COMERCIAL', axis=1, inplace=True)
+
+# Remove e corrige valores
+gas_df.replace({'GÁS NATURAL': 'GNV'}, inplace=True)
+derivados_df.drop(derivados_df[~derivados_df['PRODUTO'].isin(['GASOLINA A', 'GLP', 'ÓLEO DIESEL'])].index, inplace=True)
+etanol_df.drop(etanol_df[etanol_df['PRODUTO'] != 'ETANOL HIDRATADO'].index, inplace=True)
+precos_df.replace(regex={'OLEO': 'ÓLEO'}, inplace=True)
+
+# Renomeia colunas e concatena os dfs
+derivados_df.rename(columns={'IMPORTADO / EXPORTADO': 'IMPORTADO', 'DISPÊNDIO / RECEITA' : 'DISPÊNDIO'}, inplace=True)
+etanol_df.rename(columns={'IMPORTADO / EXPORTADO': 'IMPORTADO', 'DISPÊNDIO / RECEITA' : 'DISPÊNDIO'}, inplace=True)
+importacoes_df = pd.concat([gas_df, derivados_df, etanol_df])
 
 # * Load
